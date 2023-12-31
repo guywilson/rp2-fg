@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "pico/multicore.h"
 #include "hardware/pwm.h"
@@ -11,13 +12,15 @@
 #include "gpio_def.h"
 #include "waveform.h"
 
-#define DAC_SAMPLE_RATE          62500
+#define DAC_SAMPLE_RATE             62500
 #define DAC_SAMPLE_BIT_DEPTH        12
+#define PI                          3.1415926535
+#define DEGREE_TO_RADIANS           (PI / 180.0)
 
 static volatile waveform_type_t     currentWT;
 static volatile bool                doUpdate = false;
 
-static int                          numSamplesPerCycle = 0;
+static uint32_t                     numSamplesPerCycle = 0;
 
 static uint16_t _samples[DAC_SAMPLE_RATE];
 
@@ -67,7 +70,7 @@ static void toggleSquareWave(void) {
 }
 
 static void generateTriangleWave(uint32_t frequency) {
-    
+
 }
 
 static void generateSawtoothWave(uint32_t frequency) {
@@ -75,7 +78,24 @@ static void generateSawtoothWave(uint32_t frequency) {
 }
 
 static void generateSineWave(uint32_t frequency) {
+    double          sampleIntervalDegrees;
+    double          angle;
+    uint32_t        sampleNum;
 
+    numSamplesPerCycle = (uint32_t)((double)DAC_SAMPLE_RATE * ((double)1.0 / (double)frequency));
+    sampleIntervalDegrees = (double)(360.0 * (double)frequency) / (double)DAC_SAMPLE_RATE;
+
+    angle = 0.0;
+
+    for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
+        _samples[sampleNum] = (uint16_t)(sin(angle * (double)DEGREE_TO_RADIANS) * ((double)getDACMaxRange() - 1.0)) + (getDACMaxRange() / 2);
+
+        angle += sampleIntervalDegrees;
+
+        if (angle > 360.0) {
+            angle = angle - 360.0;
+        }
+    }
 }
 
 void wave_isr(void) {
