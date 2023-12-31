@@ -11,7 +11,7 @@
 
 void		setupRTC(void);
 void        disableRTC(void);
-void        rtcDelay(uint32_t delay_us);
+void        rtcDelay(uint64_t delay_us);
 double      getRTCFrequency(void);
 void        setRTCFrequency(double frequency);
 

@@ -46,6 +46,7 @@ if (PICO_ON_DEVICE)
             pico_stdlib 
             pico_multicore 
             hardware_rtc
+            hardware_pwm
             hardware_uart)
 
     # create map/bin/hex file etc.

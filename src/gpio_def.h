@@ -9,18 +9,34 @@
 #define I2C1_SDA_ALT_PIN			14
 #define I2C1_SLK_ALT_PIN			15
 
-#define PIO_PIN_ANEMOMETER          18
-#define PIO_PIN_RAIN_GAUGE          13
+#define SQUARE_WAVE_OUT_PIN         21
+#define DEBUG_ENABLE_PIN            22
 
-#define NRF24L01_SPI_PIN_CE          6
-#define NRF24L01_SPI_PIN_CSN         5
-#define NRF24L01_SPI_PIN_MOSI        3
-#define NRF24L01_SPI_PIN_MISO        4
-#define NRF24L01_SPI_PIN_SCK         2
+#define DAC_PIN_D11                  2
+#define DAC_PIN_D10                  3
+#define DAC_PIN_D9                   4
+#define DAC_PIN_D8                   5
+#define DAC_PIN_D7                   6
+#define DAC_PIN_D6                   7
+#define DAC_PIN_D5                   8
+#define DAC_PIN_D4                   9
+#define DAC_PIN_D3                  10
+#define DAC_PIN_D2                  11
+#define DAC_PIN_D1                  12
+#define DAC_PIN_D0                  13
 
-#define I2C0_POWER_PIN              11
-
-#define DEBUG_ENABLE_PIN            12
+#define DAC_BUS_MASK                (DAC_PIN_D11 |  \
+                                     DAC_PIN_D10 |  \
+                                     DAC_PIN_D9 |   \
+                                     DAC_PIN_D8 |   \
+                                     DAC_PIN_D7 |   \
+                                     DAC_PIN_D6 |   \
+                                     DAC_PIN_D5 |   \
+                                     DAC_PIN_D4 |   \
+                                     DAC_PIN_D3 |   \
+                                     DAC_PIN_D2 |   \
+                                     DAC_PIN_D1 |   \
+                                     DAC_PIN_D0)
 
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 

@@ -30,14 +30,14 @@ datetime_t * _fillDateTime(datetime_t * dt) {
     return dt;
 }
 
-void rtcDelay(uint32_t delay_us) {
-    uint32_t            startTime;
-    uint32_t            endTime;
+void rtcDelay(uint64_t delay_us) {
+    uint64_t            startTime;
+    uint64_t            endTime;
 
-    startTime = timer_hw->timerawl;
+    startTime = time_us_64();
     endTime = startTime + delay_us;
 
-    while (timer_hw->timerawl < endTime) {
+    while (time_us_64() < endTime) {
         asm("NOP");
     }
 }
