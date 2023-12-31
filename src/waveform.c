@@ -66,19 +66,8 @@ static void toggleSquareWave(void) {
 	}
 }
 
-static void triggerSquareWave(uint slice, uint32_t frequency) {
-    /*
-    ** Create a PWM square wave... 
-    */
-    pwm_set_clkdiv(slice, 256.0);
-    pwm_set_wrap(slice, 610);
-    pwm_set_chan_level(slice, PWM_CHAN_A, 610);
-    
-    pwm_set_enabled(slice, true);
-}
-
 static void generateTriangleWave(uint32_t frequency) {
-
+    
 }
 
 static void generateSawtoothWave(uint32_t frequency) {
