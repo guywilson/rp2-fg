@@ -15,9 +15,7 @@ typedef struct {
 }
 waveform_type_t;
 
-void generateSquareWave(uint32_t frequency);
-void generateTriangleWave(uint32_t frequency);
-void generateSawtoothWave(uint32_t frequency);
-void generateSineWave(uint32_t frequency);
+void wave_isr(void);
+void wave_entry(void);
 
 #endif

@@ -46,48 +46,6 @@ static void setup(void) {
     lgOpen(uart0, LOG_LEVEL_OFF);
 }
 
-void core1_fifo_isr(void) {
-	uint32_t			data = 0;
-    waveform_type_t *   wt;
-
-    while (multicore_fifo_rvalid()) {
-        data = multicore_fifo_pop_blocking();
-    
-        wt = (waveform_type_t *)data;
-
-        switch (wt->type) {
-            case WAVEFORM_TYPE_SQUARE:
-                generateSquareWave(wt->frequency);
-                break;
-
-            case WAVEFORM_TYPE_SINE:
-                generateSineWave(wt->frequency);
-                break;
-
-            case WAVEFORM_TYPE_TRIANGLE:
-                generateTriangleWave(wt->frequency);
-                break;
-
-            case WAVEFORM_TYPE_SAWTOOTH:
-                generateSawtoothWave(wt->frequency);
-                break;
-        }
-    }
-
-    multicore_fifo_clear_irq();
-}
-
-void main_core1(void) {
-    multicore_fifo_clear_irq();
-    irq_set_exclusive_handler(SIO_IRQ_PROC1, core1_fifo_isr);
-
-    irq_set_enabled(SIO_IRQ_PROC1, true);
-
-	while (1) {
-        __wfi();
-	}
-}
-
 int main(void) {
 	setup();
 
@@ -95,9 +53,9 @@ int main(void) {
 	multicore_fifo_drain();
 
 	/*
-	** Launch the main loop on the 2nd core...
+	** Launch the wave generator on the 2nd core...
 	*/
-	multicore_launch_core1(main_core1);
+	multicore_launch_core1(wave_entry);
 
 	initScheduler(3);
 
