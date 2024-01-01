@@ -4,14 +4,6 @@
 #include "hardware/uart.h"
 #include "serial_rp2040.h"
 
-void irqTx(void) {
-    //
-}
-
-void irqRx(void) {
-
-}
-
 void setupSerial(void)
 {
 	uart_init(uart0, 115200);

@@ -9,6 +9,7 @@
 #define I2C1_SDA_ALT_PIN			14
 #define I2C1_SLK_ALT_PIN			15
 
+#define CORE1_DEBUG_PIN             20
 #define SQUARE_WAVE_OUT_PIN         21
 #define DEBUG_ENABLE_PIN            22
 

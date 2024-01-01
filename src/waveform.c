@@ -8,6 +8,7 @@
 #include "hardware/pwm.h"
 #include "hardware/rtc.h"
 
+#include "logger.h"
 #include "rtc_rp2040.h"
 #include "gpio_def.h"
 #include "waveform.h"
@@ -17,7 +18,7 @@
 
 #define radians(d)                  (d * DEGREE_TO_RADIANS)
 
-static volatile waveform_type_t     currentWT;
+static waveform_type_t              currentWT;
 static volatile bool                doUpdate = false;
 
 static uint32_t                     numSamplesPerCycle = 0;
@@ -43,9 +44,7 @@ static bool waveTypeIsEqual(waveform_type_t * t) {
 }
 
 static inline void setCurrentWaveType(waveform_type_t * t) {
-    currentWT.type = t->type;
-    currentWT.frequency = t->frequency;
-    doUpdate = true;
+    memcpy(&currentWT, t, sizeof(waveform_type_t));
 }
 
 static inline void squareWaveHigh(void) {
@@ -165,15 +164,17 @@ static uint32_t generateSineWave(uint32_t frequency) {
 
 void wave_isr(void) {
 	uint32_t			data = 0;
-    waveform_type_t *   wt;
+    waveform_type_t     wt;
 
     while (multicore_fifo_rvalid()) {
         data = multicore_fifo_pop_blocking();
     
-        wt = (waveform_type_t *)data;
+        wt.type = (uint16_t)(data & 0x0000FFFF);
+        wt.frequency = (uint16_t)((data & 0xFFFF0000) >> 16);
 
-        if (!waveTypeIsEqual(wt)) {
-            setCurrentWaveType(wt);
+        if (!waveTypeIsEqual(&wt)) {
+            setCurrentWaveType(&wt);
+            doUpdate = true;
         }
     }
 
@@ -190,6 +191,12 @@ void wave_entry(void) {
     memset(&_samples, 0, sizeof(_samples));
 
     gpio_set_function(SQUARE_WAVE_OUT_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(SQUARE_WAVE_OUT_PIN, true);
+    gpio_put(SQUARE_WAVE_OUT_PIN, false);
+
+    gpio_set_function(CORE1_DEBUG_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(CORE1_DEBUG_PIN, true);
+    gpio_put(CORE1_DEBUG_PIN, false);
 
     multicore_fifo_clear_irq();
     irq_set_exclusive_handler(SIO_IRQ_PROC1, wave_isr);
@@ -200,9 +207,14 @@ void wave_entry(void) {
         if (doUpdate) {
             doUpdate = false;
 
+            gpio_put(CORE1_DEBUG_PIN, true);
+            rtcDelay(1000);
+            lgLogDebug("Got new WT, T:0x%04X, F:%d", currentWT.type, currentWT.frequency);
+            gpio_put(CORE1_DEBUG_PIN, false);
+
             switch (currentWT.type) {
                 case WAVEFORM_TYPE_SQUARE:
-                    delayus = (uint64_t)(((double)1 / (double)currentWT.frequency) / (double)2 * 1000000);
+                    delayus = (uint64_t)((double)500000.0 / (double)currentWT.frequency);
                     break;
 
                 case WAVEFORM_TYPE_SINE:
@@ -257,6 +269,9 @@ void wave_entry(void) {
                 break;
 
             default:
+                squareWaveLow();
+                pushDACSample(0x0000);
+                
                 __wfi();
                 break;
         }
