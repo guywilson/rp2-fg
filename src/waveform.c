@@ -73,9 +73,9 @@ static void pushDACSample(uint16_t sample) {
 }
 
 static uint32_t generateTriangleWave(uint32_t frequency) {
-    uint16_t        sampleValue = 0;
-    uint16_t        sampleInterval = 0;
+    double          gradient;
     uint32_t        sampleNum;
+    uint32_t        countDown;
     uint32_t        cycle_us;
     uint32_t        sampleDelay_us = 0;
 
@@ -86,21 +86,23 @@ static uint32_t generateTriangleWave(uint32_t frequency) {
         numSamplesPerCycle = DAC_SAMPLE_RATE;
     }
 
+    gradient = (double)(getDACMaxRange() - 1) / (double)(numSamplesPerCycle >> 1);
+
     sampleDelay_us = cycle_us / numSamplesPerCycle;
 
-    sampleInterval = getDACMaxRange() / (numSamplesPerCycle >> 1);
-
-    for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
-        _samples[sampleNum] = sampleValue;
-
-        if (sampleValue <= (getDACMaxRange() - 1)) {
-            sampleValue += sampleInterval;
-        }
-        else {
-            sampleValue -= sampleInterval;
-        }
+    for (sampleNum = 0;sampleNum < (numSamplesPerCycle >> 1);sampleNum++) {
+        _samples[sampleNum] = (uint16_t)(gradient * (double)sampleNum);
     }
 
+    /*
+    ** Downslope is the opposite of the upslope...
+    */
+    countDown = sampleNum - 1;
+
+    for (sampleNum = (numSamplesPerCycle >> 1);sampleNum < numSamplesPerCycle;sampleNum++) {
+        _samples[sampleNum] = _samples[countDown--];
+    }
+    
     return sampleDelay_us;
 }
 
@@ -209,7 +211,6 @@ void wave_entry(void) {
 
             gpio_put(CORE1_DEBUG_PIN, true);
             rtcDelay(1000);
-            lgLogDebug("Got new WT, T:0x%04X, F:%d", currentWT.type, currentWT.frequency);
             gpio_put(CORE1_DEBUG_PIN, false);
 
             switch (currentWT.type) {
@@ -271,7 +272,7 @@ void wave_entry(void) {
             default:
                 squareWaveLow();
                 pushDACSample(0x0000);
-                
+
                 __wfi();
                 break;
         }
