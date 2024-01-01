@@ -9,6 +9,12 @@
 #define WAVEFORM_TYPE_SAWTOOTH          0x0004
 #define WAVEFORM_TYPE_TRIANGLE          0x0008
 
+#define DAC_SAMPLE_RATE             62500
+#define DAC_SAMPLE_BIT_DEPTH        12
+
+#define MAX_SUPPORTED_FREQUENCY     20000
+#define MIN_DAC_SAMPLE_DELAY_US     2
+
 typedef struct {
     int         type;
 

@@ -12,10 +12,10 @@
 #include "gpio_def.h"
 #include "waveform.h"
 
-#define DAC_SAMPLE_RATE             62500
-#define DAC_SAMPLE_BIT_DEPTH        12
 #define PI                          3.1415926535
 #define DEGREE_TO_RADIANS           (PI / 180.0)
+
+#define radians(d)                  (d * DEGREE_TO_RADIANS)
 
 static volatile waveform_type_t     currentWT;
 static volatile bool                doUpdate = false;
@@ -69,26 +69,89 @@ static void toggleSquareWave(void) {
 	}
 }
 
-static void generateTriangleWave(uint32_t frequency) {
-
+static void pushDACSample(uint16_t sample) {
+    gpio_put_masked(DAC_BUS_MASK, sample);
 }
 
-static void generateSawtoothWave(uint32_t frequency) {
-
-}
-
-static void generateSineWave(uint32_t frequency) {
-    double          sampleIntervalDegrees;
-    double          angle;
+static uint32_t generateTriangleWave(uint32_t frequency) {
+    uint16_t        sampleValue = 0;
+    uint16_t        sampleInterval = 0;
     uint32_t        sampleNum;
+    uint32_t        cycle_us;
+    uint32_t        sampleDelay_us = 0;
 
-    numSamplesPerCycle = (uint32_t)((double)DAC_SAMPLE_RATE * ((double)1.0 / (double)frequency));
-    sampleIntervalDegrees = (double)(360.0 * (double)frequency) / (double)DAC_SAMPLE_RATE;
+    cycle_us = 1000000 / frequency;
+    numSamplesPerCycle = cycle_us / MIN_DAC_SAMPLE_DELAY_US;
 
-    angle = 0.0;
+    if (numSamplesPerCycle > DAC_SAMPLE_RATE) {
+        numSamplesPerCycle = DAC_SAMPLE_RATE;
+    }
+
+    sampleDelay_us = cycle_us / numSamplesPerCycle;
+
+    sampleInterval = getDACMaxRange() / (numSamplesPerCycle >> 1);
 
     for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
-        _samples[sampleNum] = (uint16_t)(sin(angle * (double)DEGREE_TO_RADIANS) * ((double)getDACMaxRange() - 1.0)) + (getDACMaxRange() / 2);
+        _samples[sampleNum] = sampleValue;
+
+        if (sampleValue <= (getDACMaxRange() - 1)) {
+            sampleValue += sampleInterval;
+        }
+        else {
+            sampleValue -= sampleInterval;
+        }
+    }
+
+    return sampleDelay_us;
+}
+
+static uint32_t generateSawtoothWave(uint32_t frequency) {
+    uint16_t        sampleValue = getDACMaxRange() - 1;
+    uint16_t        sampleInterval = 0;
+    uint32_t        sampleNum;
+    uint32_t        cycle_us;
+    uint32_t        sampleDelay_us = 0;
+
+    cycle_us = 1000000 / frequency;
+    numSamplesPerCycle = cycle_us / MIN_DAC_SAMPLE_DELAY_US;
+
+    if (numSamplesPerCycle > DAC_SAMPLE_RATE) {
+        numSamplesPerCycle = DAC_SAMPLE_RATE;
+    }
+
+    sampleDelay_us = cycle_us / numSamplesPerCycle;
+
+    sampleInterval = getDACMaxRange() / numSamplesPerCycle;
+
+    for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
+        _samples[sampleNum] = sampleValue;
+
+        sampleValue -= sampleInterval;
+    }
+
+    return sampleDelay_us;
+}
+
+static uint32_t generateSineWave(uint32_t frequency) {
+    double          sampleIntervalDegrees;
+    double          angle = 0.0;
+    uint32_t        sampleNum;
+    uint32_t        cycle_us;
+    uint32_t        sampleDelay_us = 0;
+
+    cycle_us = 1000000 / frequency;
+    numSamplesPerCycle = cycle_us / MIN_DAC_SAMPLE_DELAY_US;
+
+    if (numSamplesPerCycle > DAC_SAMPLE_RATE) {
+        numSamplesPerCycle = DAC_SAMPLE_RATE;
+    }
+
+    sampleDelay_us = cycle_us / numSamplesPerCycle;
+
+    sampleIntervalDegrees = ((double)360.0 / (double)numSamplesPerCycle);
+
+    for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
+        _samples[sampleNum] = (uint16_t)((sin(radians(angle)) + 1.0) * (double)(getDACMaxRange() >> 1));
 
         angle += sampleIntervalDegrees;
 
@@ -96,6 +159,8 @@ static void generateSineWave(uint32_t frequency) {
             angle = angle - 360.0;
         }
     }
+
+    return sampleDelay_us;
 }
 
 void wave_isr(void) {
@@ -142,9 +207,8 @@ void wave_entry(void) {
 
                 case WAVEFORM_TYPE_SINE:
                     squareWaveLow();
-                    delayus = (uint64_t)((double)1 / (double)DAC_SAMPLE_RATE * 1000000);
 
-                    generateSineWave(currentWT.frequency);
+                    delayus = (uint64_t)generateSineWave(currentWT.frequency);
                     break;
 
                 case WAVEFORM_TYPE_TRIANGLE:
@@ -164,9 +228,10 @@ void wave_entry(void) {
                 default:
                     squareWaveLow();
 
-                    gpio_put_masked(
-                        DAC_BUS_MASK,
-                        (uint32_t)0x00000000);
+                    /*
+                    ** Switch off the DAC output...
+                    */
+                    pushDACSample(0x0000);
                     break;
             }
         }
@@ -181,7 +246,10 @@ void wave_entry(void) {
             case WAVEFORM_TYPE_TRIANGLE:
             case WAVEFORM_TYPE_SAWTOOTH:
             case WAVEFORM_TYPE_SINE:
-                gpio_put_masked(DAC_BUS_MASK, _samples[sampleNum++]);
+                /*
+                ** Push the DAC sample to the DAC...
+                */
+                pushDACSample(_samples[sampleNum++]);
                 
                 if (sampleNum == numSamplesPerCycle) {
                     sampleNum = 0;

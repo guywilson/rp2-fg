@@ -12,7 +12,7 @@
 #define SQUARE_WAVE_OUT_PIN         21
 #define DEBUG_ENABLE_PIN            22
 
-#define DAC_PIN_D11                  2
+#define DAC_PIN_D11                  2      // MSB
 #define DAC_PIN_D10                  3
 #define DAC_PIN_D9                   4
 #define DAC_PIN_D8                   5
@@ -23,7 +23,7 @@
 #define DAC_PIN_D3                  10
 #define DAC_PIN_D2                  11
 #define DAC_PIN_D1                  12
-#define DAC_PIN_D0                  13
+#define DAC_PIN_D0                  13      // LSB
 
 #define DAC_BUS_MASK                (DAC_PIN_D11 |  \
                                      DAC_PIN_D10 |  \
