@@ -107,9 +107,9 @@ static uint32_t generateTriangleWave(uint32_t frequency) {
 }
 
 static uint32_t generateSawtoothWave(uint32_t frequency) {
-    uint16_t        sampleValue = getDACMaxRange() - 1;
-    uint16_t        sampleInterval = 0;
+    double          gradient;
     uint32_t        sampleNum;
+    uint32_t        reverseSampleNum;
     uint32_t        cycle_us;
     uint32_t        sampleDelay_us = 0;
 
@@ -120,16 +120,16 @@ static uint32_t generateSawtoothWave(uint32_t frequency) {
         numSamplesPerCycle = DAC_SAMPLE_RATE;
     }
 
+    gradient = (double)(getDACMaxRange() - 1) / (double)numSamplesPerCycle;
+
     sampleDelay_us = cycle_us / numSamplesPerCycle;
 
-    sampleInterval = getDACMaxRange() / numSamplesPerCycle;
+    reverseSampleNum = numSamplesPerCycle;
 
     for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
-        _samples[sampleNum] = sampleValue;
-
-        sampleValue -= sampleInterval;
+        _samples[sampleNum] = (uint16_t)(gradient * (double)reverseSampleNum--);
     }
-
+    
     return sampleDelay_us;
 }
 
