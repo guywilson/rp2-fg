@@ -19,7 +19,9 @@
 #define radians(d)                  (d * DEGREE_TO_RADIANS)
 
 static waveform_type_t              currentWT;
+
 static volatile bool                doUpdate = false;
+static volatile int                 sampleNum = 0;
 
 static uint32_t                     numSamplesPerCycle = 0;
 
@@ -177,6 +179,7 @@ void wave_isr(void) {
         if (!waveTypeIsEqual(&wt)) {
             setCurrentWaveType(&wt);
             doUpdate = true;
+            sampleNum = 0;
         }
     }
 
@@ -185,7 +188,6 @@ void wave_isr(void) {
 
 void wave_entry(void) {
     uint64_t        delayus = 0;
-    int             sampleNum = 0;
 
     currentWT.type = WAVEFORM_TYPE_OFF;
     currentWT.frequency = 0;
@@ -209,6 +211,8 @@ void wave_entry(void) {
         if (doUpdate) {
             doUpdate = false;
 
+            sampleNum = 0;
+
             gpio_put(CORE1_DEBUG_PIN, true);
             rtcDelay(1000);
             gpio_put(CORE1_DEBUG_PIN, false);
@@ -226,16 +230,14 @@ void wave_entry(void) {
 
                 case WAVEFORM_TYPE_TRIANGLE:
                     squareWaveLow();
-                    delayus = (uint64_t)((double)1 / (double)DAC_SAMPLE_RATE * 1000000);
 
-                    generateTriangleWave(currentWT.frequency);
+                    delayus = generateTriangleWave(currentWT.frequency);
                     break;
 
                 case WAVEFORM_TYPE_SAWTOOTH:
                     squareWaveLow();
-                    delayus = (uint64_t)((double)1 / (double)DAC_SAMPLE_RATE * 1000000);
 
-                    generateSawtoothWave(currentWT.frequency);
+                    delayus = generateSawtoothWave(currentWT.frequency);
                     break;
 
                 default:
@@ -272,6 +274,7 @@ void wave_entry(void) {
             default:
                 squareWaveLow();
                 pushDACSample(0x0000);
+                sampleNum = 0;
 
                 __wfi();
                 break;
