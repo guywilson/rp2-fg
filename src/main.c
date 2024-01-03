@@ -34,20 +34,40 @@ void taskDebugCheck(PTASKPARM p) {
     }
 }
 
-void taskSquareWaveDebug(PTASKPARM p) {
-    static bool             isOn = false;
+void taskWaveDebug(PTASKPARM p) {
+    static uint16_t         state = WAVEFORM_TYPE_SAWTOOTH;
     waveform_type_t         wt;
     uint32_t                data;
+    const uint16_t          frequency = 1000;
 
-    if (isOn) {
-        isOn = false;
-        wt.type = WAVEFORM_TYPE_OFF;
-        wt.frequency = 0;
-    }
-    else {
-        isOn = true;
-        wt.type = WAVEFORM_TYPE_SQUARE;
-        wt.frequency = 1000;
+    switch (state) {
+        case WAVEFORM_TYPE_OFF:
+            wt.type = WAVEFORM_TYPE_OFF;
+            wt.frequency = 0;
+            state = WAVEFORM_TYPE_SAWTOOTH;
+            break;
+
+        case WAVEFORM_TYPE_SAWTOOTH:
+            wt.type = WAVEFORM_TYPE_SAWTOOTH;
+            wt.frequency = frequency;
+            state = WAVEFORM_TYPE_TRIANGLE;
+            break;
+
+        case WAVEFORM_TYPE_TRIANGLE:
+            wt.type = WAVEFORM_TYPE_TRIANGLE;
+            wt.frequency = frequency;
+            state = WAVEFORM_TYPE_SINE;
+            break;
+
+        case WAVEFORM_TYPE_SINE:
+            wt.type = WAVEFORM_TYPE_SINE;
+            wt.frequency = frequency;
+            state = WAVEFORM_TYPE_OFF;
+            break;
+
+        // case WAVEFORM_TYPE_SQUARE:
+        //     wt.frequency = frequency;
+        //     break;
     }
 
     data = ((uint32_t)wt.frequency << 16) | (uint32_t)wt.type;
@@ -95,7 +115,7 @@ int main(void) {
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
-    registerTask(TASK_SQUAREWAVE_DEBUG, &taskSquareWaveDebug);
+    registerTask(TASK_WAVE_DEBUG, &taskWaveDebug);
     registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
 
 	scheduleTask(
@@ -111,8 +131,8 @@ int main(void) {
 			NULL);
 
 	scheduleTask(
-			TASK_SQUAREWAVE_DEBUG, 
-			rtc_val_sec(5), 
+			TASK_WAVE_DEBUG, 
+			rtc_val_sec(10), 
             true, 
 			NULL);
 

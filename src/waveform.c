@@ -27,11 +27,13 @@ static uint32_t                     numSamplesPerCycle = 0;
 
 static uint16_t _samples[DAC_SAMPLE_RATE];
 
+static const uint32_t               gpioDACBitMask = DAC_BUS_MASK;
+
 static uint32_t getDACMaxRange(void) {
     static uint32_t         maxRange = 0;
 
     if (maxRange == 0) {
-        maxRange = (2 ^ DAC_SAMPLE_BIT_DEPTH);
+        maxRange = (1 << DAC_SAMPLE_BIT_DEPTH);
     }
 
     return maxRange;
@@ -68,10 +70,6 @@ static void toggleSquareWave(void) {
         squareWaveLow();
 		state = 0;
 	}
-}
-
-static void pushDACSample(uint16_t sample) {
-    gpio_put_masked(DAC_BUS_MASK, sample);
 }
 
 static uint32_t generateTriangleWave(uint32_t frequency) {
@@ -156,6 +154,10 @@ static uint32_t generateSineWave(uint32_t frequency) {
     for (sampleNum = 0;sampleNum < numSamplesPerCycle;sampleNum++) {
         _samples[sampleNum] = (uint16_t)((sin(radians(angle)) + 1.0) * (double)(getDACMaxRange() >> 1));
 
+        if (_samples[sampleNum] > getDACMaxRange() - 1) {
+            _samples[sampleNum] = getDACMaxRange() - 1;
+        }
+
         angle += sampleIntervalDegrees;
 
         if (angle > 360.0) {
@@ -164,6 +166,21 @@ static uint32_t generateSineWave(uint32_t frequency) {
     }
 
     return sampleDelay_us;
+}
+
+static void pushDACSample(uint16_t sample) {
+    gpio_put_masked(gpioDACBitMask, ((uint32_t)sample << DAC_PIN_D0));
+}
+
+static void setupDACPins(void) {
+    uint                i;
+
+    for (i = DAC_PIN_D0;i <= DAC_PIN_D11;i++) {
+        gpio_set_function(i, GPIO_FUNC_SIO);
+        gpio_set_dir(i, GPIO_OUT);
+        gpio_set_drive_strength(i, GPIO_DRIVE_STRENGTH_2MA);
+        gpio_set_slew_rate(i, GPIO_SLEW_RATE_FAST);
+    }
 }
 
 void wave_isr(void) {
@@ -201,6 +218,8 @@ void wave_entry(void) {
     gpio_set_function(CORE1_DEBUG_PIN, GPIO_FUNC_SIO);
     gpio_set_dir(CORE1_DEBUG_PIN, true);
     gpio_put(CORE1_DEBUG_PIN, false);
+
+    setupDACPins();
 
     multicore_fifo_clear_irq();
     irq_set_exclusive_handler(SIO_IRQ_PROC1, wave_isr);
