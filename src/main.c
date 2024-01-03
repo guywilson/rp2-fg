@@ -38,7 +38,7 @@ void taskWaveDebug(PTASKPARM p) {
     static uint16_t         state = WAVEFORM_TYPE_SAWTOOTH;
     waveform_type_t         wt;
     uint32_t                data;
-    const uint16_t          frequency = 1000;
+    const uint16_t          frequency = 20000;
 
     switch (state) {
         case WAVEFORM_TYPE_OFF:
