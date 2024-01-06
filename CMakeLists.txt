@@ -30,8 +30,11 @@ if (PICO_ON_DEVICE)
             src/main.c
             src/scheduler.c
             src/rtc_rp2040.c
+            src/i2c_rp2040.c
             src/error_rp2040.c
             src/serial_rp2040.c
+            src/MCP4725.c
+            src/AiP31068.c
             src/logger.c
             src/heartbeat.c
             src/utils.c
@@ -47,7 +50,7 @@ if (PICO_ON_DEVICE)
             pico_multicore 
             hardware_rtc
             hardware_pwm
-            hardware_uart)
+            hardware_i2c)
 
     # create map/bin/hex file etc.
     pico_add_extra_outputs(rp2-fg)

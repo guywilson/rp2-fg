@@ -7,9 +7,11 @@
 #include "pico/multicore.h"
 #include "hardware/pwm.h"
 #include "hardware/rtc.h"
+#include "hardware/i2c.h"
 
 #include "logger.h"
 #include "rtc_rp2040.h"
+#include "MCP4725.h"
 #include "gpio_def.h"
 #include "waveform.h"
 
@@ -29,14 +31,8 @@ static uint16_t _samples[DAC_SAMPLE_RATE];
 
 static const uint32_t               gpioDACBitMask = DAC_BUS_MASK;
 
-static uint32_t getDACMaxRange(void) {
-    static uint32_t         maxRange = 0;
-
-    if (maxRange == 0) {
-        maxRange = (1 << DAC_SAMPLE_BIT_DEPTH);
-    }
-
-    return maxRange;
+static inline uint32_t getDACMaxRange(void) {
+    return (uint32_t)(1 << DAC_SAMPLE_BIT_DEPTH);
 }
 
 static bool waveTypeIsEqual(waveform_type_t * t) {
@@ -60,16 +56,17 @@ static inline void squareWaveLow(void) {
 }
 
 static void toggleSquareWave(void) {
-	static unsigned char state = 0;
-	
-	if (!state) {
-        squareWaveHigh();
-		state = 1;
-	}
-	else {
-        squareWaveLow();
-		state = 0;
-	}
+	gpio_xor_mask((1 << SQUARE_WAVE_OUT_PIN));
+    // static bool state = false;
+
+	// if (!state) {
+    //     squareWaveHigh();
+	// 	state = true;
+	// }
+	// else {
+    //     squareWaveLow();
+	// 	state = false;
+	// }
 }
 
 static uint32_t generateTriangleWave(uint32_t frequency) {
@@ -169,13 +166,14 @@ static uint32_t generateSineWave(uint32_t frequency) {
 }
 
 static void pushDACSample(uint16_t sample) {
-    gpio_put_masked(gpioDACBitMask, ((uint32_t)sample << DAC_PIN_D0));
+    //gpio_put_masked(gpioDACBitMask, ((uint32_t)sample << DAC_PIN_D0));
+    writeSampleFast(i2c0, sample, false);
 }
 
 static void setupDACPins(void) {
     uint                i;
 
-    for (i = DAC_PIN_D0;i <= DAC_PIN_D11;i++) {
+    for (i = DAC_PIN_D0;i <= DAC_PIN_D13;i++) {
         gpio_set_function(i, GPIO_FUNC_SIO);
         gpio_set_dir(i, GPIO_OUT);
         gpio_set_drive_strength(i, GPIO_DRIVE_STRENGTH_2MA);
@@ -219,7 +217,7 @@ void wave_entry(void) {
     gpio_set_dir(CORE1_DEBUG_PIN, true);
     gpio_put(CORE1_DEBUG_PIN, false);
 
-    setupDACPins();
+ //   setupDACPins();
 
     multicore_fifo_clear_irq();
     irq_set_exclusive_handler(SIO_IRQ_PROC1, wave_isr);

@@ -1,0 +1,14 @@
+; PIO waveform output
+; --------------------------------
+;
+; OUTput pin at pin offset 0 is our data pin
+; Our jmp pin is set to the data pin
+;
+.program wave
+
+start:
+
+.wrap_target
+    ; Get a sample from the OSR and output it to the pins
+    OUT pins 14
+.wrap

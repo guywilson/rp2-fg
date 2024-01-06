@@ -14,6 +14,8 @@
 #include "pico/binary_info.h"
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
+#include "hardware/i2c.h"
+#include "hardware/gpio.h"
 #include "rtc_rp2040.h"
 #include "serial_rp2040.h"
 #include "heartbeat.h"
@@ -26,19 +28,19 @@
 #define MAX_WT_POOL_SIZE                5
 
 void taskDebugCheck(PTASKPARM p) {
-    if (isDebugActive()) {
-        lgSetLogLevel(LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
-    }
-    else {
-        lgSetLogLevel(LOG_LEVEL_OFF);
-    }
+    // if (isDebugActive()) {
+    //     lgSetLogLevel(LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
+    // }
+    // else {
+    //     lgSetLogLevel(LOG_LEVEL_OFF);
+    // }
 }
 
 void taskWaveDebug(PTASKPARM p) {
     static uint16_t         state = WAVEFORM_TYPE_SAWTOOTH;
     waveform_type_t         wt;
     uint32_t                data;
-    const uint16_t          frequency = 20000;
+    const uint16_t          frequency = 2000;
 
     switch (state) {
         case WAVEFORM_TYPE_OFF:
@@ -91,9 +93,11 @@ static void setup(void) {
 	setupLEDPin();
     setupDebugPin();
 	setupRTC();
-	setupSerial();
 
-    lgOpen(uart0, LOG_LEVEL_OFF);
+    i2c_init(i2c0, 400000);
+
+    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
     rtcDelay(1000000U);
 }
