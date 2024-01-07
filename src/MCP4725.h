@@ -8,6 +8,6 @@
 
 int setupMCP4725(i2c_inst_t * i2c);
 int writeSample(i2c_inst_t * i2c, uint16_t sample);
-int writeSampleFast(i2c_inst_t * i2c, uint16_t sample, bool isLast);
+int writeSampleFast(i2c_inst_t * i2c, uint16_t sample, bool isFirst, bool isLast);
 
 #endif

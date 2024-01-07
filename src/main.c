@@ -24,6 +24,8 @@
 #include "utils.h"
 #include "gpio_def.h"
 #include "waveform.h"
+#include "MCP4725.h"
+#include "AiP31068.h"
 
 #define MAX_WT_POOL_SIZE                5
 
@@ -94,11 +96,6 @@ static void setup(void) {
     setupDebugPin();
 	setupRTC();
 
-    i2c_init(i2c0, 400000);
-
-    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
-
     rtcDelay(1000000U);
 }
 
@@ -113,13 +110,12 @@ int main(void) {
 	*/
 	multicore_launch_core1(wave_entry);
 
-    lgLogDebug("In main()");
-
-	initScheduler(4);
+	initScheduler(5);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
     registerTask(TASK_WAVE_DEBUG, &taskWaveDebug);
+    registerTask(TASK_LCD_INITIALISE, &taskLCDInitialise);
     registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
 
 	scheduleTask(
@@ -145,6 +141,11 @@ int main(void) {
 	// 		rtc_val_sec(1), 
     //         true, 
 	// 		NULL);
+
+    lcdSetup_AIP31068(i2c0);
+    lcdWriteCommand(i2c0, AIP31068_CMD_DISPLAY_CTRL | CMD_DISPLAY_CTRL_DISPLAY_ON);
+    
+    lcdPrint(i2c0, "Hello World!");
 
 	/*
 	** Enable the watchdog, it will reset the device in 100ms unless

@@ -15,6 +15,8 @@
 #include "gpio_def.h"
 #include "waveform.h"
 
+//#define USE_MCP4725_DAC
+
 #define PI                          3.1415926535
 #define DEGREE_TO_RADIANS           (PI / 180.0)
 
@@ -29,7 +31,9 @@ static uint32_t                     numSamplesPerCycle = 0;
 
 static uint16_t _samples[DAC_SAMPLE_RATE];
 
+#ifndef USE_MCP4725_DAC
 static const uint32_t               gpioDACBitMask = DAC_BUS_MASK;
+#endif
 
 static inline uint32_t getDACMaxRange(void) {
     return (uint32_t)(1 << DAC_SAMPLE_BIT_DEPTH);
@@ -165,12 +169,16 @@ static uint32_t generateSineWave(uint32_t frequency) {
     return sampleDelay_us;
 }
 
-static void pushDACSample(uint16_t sample) {
-    //gpio_put_masked(gpioDACBitMask, ((uint32_t)sample << DAC_PIN_D0));
-    writeSampleFast(i2c0, sample, false);
+static void pushDACSample(uint16_t sample, bool isFirst) {
+#ifndef USE_MCP4725_DAC
+    gpio_put_masked(gpioDACBitMask, ((uint32_t)sample << DAC_PIN_D0));
+#else
+    writeSampleFast(i2c0, sample, isFirst, false);
+#endif
 }
 
 static void setupDACPins(void) {
+#ifndef USE_MCP4725_DAC
     uint                i;
 
     for (i = DAC_PIN_D0;i <= DAC_PIN_D13;i++) {
@@ -179,6 +187,12 @@ static void setupDACPins(void) {
         gpio_set_drive_strength(i, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_slew_rate(i, GPIO_SLEW_RATE_FAST);
     }
+#else
+    i2c_init(i2c0, 400000);
+
+    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
+#endif
 }
 
 void wave_isr(void) {
@@ -203,6 +217,7 @@ void wave_isr(void) {
 
 void wave_entry(void) {
     uint64_t        delayus = 0;
+    bool            isFirst = true;
 
     currentWT.type = WAVEFORM_TYPE_OFF;
     currentWT.frequency = 0;
@@ -217,7 +232,7 @@ void wave_entry(void) {
     gpio_set_dir(CORE1_DEBUG_PIN, true);
     gpio_put(CORE1_DEBUG_PIN, false);
 
- //   setupDACPins();
+    setupDACPins();
 
     multicore_fifo_clear_irq();
     irq_set_exclusive_handler(SIO_IRQ_PROC1, wave_isr);
@@ -234,6 +249,8 @@ void wave_entry(void) {
             rtcDelay(1000);
             gpio_put(CORE1_DEBUG_PIN, false);
 
+            writeSampleFast(i2c0, 0x0000, isFirst, true);
+
             switch (currentWT.type) {
                 case WAVEFORM_TYPE_SQUARE:
                     delayus = (uint64_t)((double)500000.0 / (double)currentWT.frequency);
@@ -243,18 +260,24 @@ void wave_entry(void) {
                     squareWaveLow();
 
                     delayus = (uint64_t)generateSineWave(currentWT.frequency);
+
+                    isFirst = true;
                     break;
 
                 case WAVEFORM_TYPE_TRIANGLE:
                     squareWaveLow();
 
                     delayus = generateTriangleWave(currentWT.frequency);
+
+                    isFirst = true;
                     break;
 
                 case WAVEFORM_TYPE_SAWTOOTH:
                     squareWaveLow();
 
                     delayus = generateSawtoothWave(currentWT.frequency);
+
+                    isFirst = true;
                     break;
 
                 default:
@@ -263,7 +286,7 @@ void wave_entry(void) {
                     /*
                     ** Switch off the DAC output...
                     */
-                    pushDACSample(0x0000);
+                    pushDACSample(0x0000, isFirst);
                     break;
             }
         }
@@ -281,8 +304,12 @@ void wave_entry(void) {
                 /*
                 ** Push the DAC sample to the DAC...
                 */
-                pushDACSample(_samples[sampleNum++]);
+                pushDACSample(_samples[sampleNum++], isFirst);
                 
+                if (isFirst) {
+                    isFirst = false;
+                }
+
                 if (sampleNum == numSamplesPerCycle) {
                     sampleNum = 0;
                 }
@@ -290,7 +317,7 @@ void wave_entry(void) {
 
             default:
                 squareWaveLow();
-                pushDACSample(0x0000);
+                pushDACSample(0x0000, isFirst);
                 sampleNum = 0;
 
                 __wfi();
