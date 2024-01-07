@@ -117,20 +117,28 @@ int lcdSetup_AIP31068(i2c_inst_t * i2c) {
 
 int lcdWriteCommand(i2c_inst_t * i2c, uint8_t cmd) {
     uint8_t         msg[2];
+    int             error;
 
     msg[0] = 0x00;
     msg[1] = cmd;
 
-    return i2c_write_timeout_us(i2c, AIP31068_LCD_ADDRESS >> 1, msg, 2, false, 250);
+    error =  i2c_write_timeout_us(i2c, AIP31068_LCD_ADDRESS >> 1, msg, 2, false, 250);
+
+    rtcDelay(50);
+
+    return error;
 }
 
 int lcdWriteChar(i2c_inst_t * i2c, char ch) {
     uint8_t         msg[2];
+    int             error;
 
     msg[0] = 0x01;
     msg[1] = (uint8_t)ch;
 
-    return i2c_write_timeout_us(i2c, AIP31068_LCD_ADDRESS >> 1, msg, 2, false, 250);
+    error =  i2c_write_timeout_us(i2c, AIP31068_LCD_ADDRESS >> 1, msg, 2, false, 250);
+    
+    return error;
 }
 
 void lcdPrint(i2c_inst_t * i2c, char * str) {
@@ -139,5 +147,6 @@ void lcdPrint(i2c_inst_t * i2c, char * str) {
 
     for (i = 0;i < len;i++) {
         lcdWriteChar(i2c, str[i]);
+        rtcDelay(50);
     }
 }
