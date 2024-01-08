@@ -143,9 +143,6 @@ int main(void) {
 	// 		NULL);
 
     lcdSetup_AIP31068(i2c0);
-    lcdWriteCommand(i2c0, AIP31068_CMD_DISPLAY_CTRL | CMD_DISPLAY_CTRL_DISPLAY_ON);
-    
-    lcdPrint(i2c0, "Hello World!");
 
 	/*
 	** Enable the watchdog, it will reset the device in 100ms unless

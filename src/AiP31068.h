@@ -38,6 +38,6 @@ void    taskLCDInitialise(PTASKPARM p);
 int     lcdSetup_AIP31068(i2c_inst_t * i2c);
 int     lcdWriteCommand(i2c_inst_t * i2c, uint8_t cmd);
 int     lcdWriteChar(i2c_inst_t * i2c, char ch);
-void    lcdPrint(i2c_inst_t * i2c, char * pszFmt);
+void    lcdPrint(i2c_inst_t * i2c, const char * pszFmt);
 
 #endif
