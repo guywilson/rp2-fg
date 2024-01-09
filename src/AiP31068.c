@@ -41,6 +41,7 @@ lcd_print_buffer_t;
 
 static char         _lcdScreenBuffer[LCD_SCREEN_BUFFER_SIZE];
 static bool         isLCDInitialised = false;
+static bool         isBusy = false;
 
 void taskLCDInitialise(PTASKPARM p) {
     static int          state = STATE_BEGIN;
@@ -139,6 +140,7 @@ void taskLCDPrint(PTASKPARM p) {
     }
     else {
         i = 0;
+        isBusy = false;
     }
 }
 
@@ -178,9 +180,20 @@ int lcdWriteChar(i2c_inst_t * i2c, char ch) {
     return error;
 }
 
-void lcdPrint(i2c_inst_t * i2c, const char * str, int length) {
+bool lcdGetIsBusy(void) {
+    return isBusy;
+}
+
+int lcdPrint(i2c_inst_t * i2c, const char * str, int length) {
     static lcd_print_buffer_t           p;
     static char                         buffer[LCD_SCREEN_BUFFER_SIZE];
+
+    if (!isLCDInitialised) {
+        return -2;
+    }
+    if (isBusy) {
+        return -1;
+    }
 
     strncpy(buffer, str, length);
 
@@ -189,10 +202,15 @@ void lcdPrint(i2c_inst_t * i2c, const char * str, int length) {
     p.length = length;
 
     scheduleTask(TASK_LCD_PRINT, rtc_val_ms(1), false, &p);
+
+    isBusy = true;
+
+    return 0;
 }
 
 int lcdClearText(i2c_inst_t * i2c) {
-    memset(_lcdScreenBuffer, 0, LCD_SCREEN_BUFFER_SIZE);
+    memset(_lcdScreenBuffer, 0x20, LCD_SCREEN_BUFFER_SIZE - 1);
+    _lcdScreenBuffer[LCD_SCREEN_BUFFER_SIZE - 1] = 0;
 
     return lcdWriteCommand(i2c, AIP31068_CMD_CLEAR_DISPLAY);
 }
@@ -202,21 +220,23 @@ int lcdSetText(int row, int startColumn, char * pszText, int length, bool isRigh
     bool            isValidCoordinates = false;
 
     if (isRightJustified) {
-        adjustedStartColumn = startColumn - length;
+        adjustedStartColumn = LCD_NUM_COLUMNS - length;
     }
     else {
         adjustedStartColumn = startColumn;
     }
 
     isValidCoordinates = 
-                    (row > 0)                   && 
+                    (row >= 0)                  && 
                     (row < LCD_NUM_ROWS)        && 
-                    (adjustedStartColumn > 0)   && 
-                    ((adjustedStartColumn + length) < LCD_NUM_COLUMNS);
+                    (adjustedStartColumn >= 0)  && 
+                    ((adjustedStartColumn + length) <= LCD_NUM_COLUMNS);
 
     if (isValidCoordinates) {
+        adjustedStartColumn += (LCD_ROW_BUFFER_SIZE * row);
+
         memcpy(
-            &_lcdScreenBuffer[adjustedStartColumn + (LCD_ROW_BUFFER_SIZE * row)], 
+            &_lcdScreenBuffer[adjustedStartColumn], 
             pszText, 
             (size_t)length);
     }
