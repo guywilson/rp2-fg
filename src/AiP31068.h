@@ -35,9 +35,13 @@
 #define CMD_FUNCTION_SET_2_LINE                 0x08
 
 void    taskLCDInitialise(PTASKPARM p);
+void    taskLCDPrint(PTASKPARM p);
 int     lcdSetup_AIP31068(i2c_inst_t * i2c);
 int     lcdWriteCommand(i2c_inst_t * i2c, uint8_t cmd);
 int     lcdWriteChar(i2c_inst_t * i2c, char ch);
-void    lcdPrint(i2c_inst_t * i2c, const char * pszFmt);
+void    lcdPrint(i2c_inst_t * i2c, const char * str, int length);
+int     lcdClearText(i2c_inst_t * i2c);
+int     lcdSetText(int row, int startColumn, char * pszText, int length, bool isRightJustified);
+void    lcdShowText(i2c_inst_t * i2c);
 
 #endif

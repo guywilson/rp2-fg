@@ -110,12 +110,13 @@ int main(void) {
 	*/
 	multicore_launch_core1(wave_entry);
 
-	initScheduler(5);
+	initScheduler(6);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
     registerTask(TASK_WAVE_DEBUG, &taskWaveDebug);
     registerTask(TASK_LCD_INITIALISE, &taskLCDInitialise);
+    registerTask(TASK_LCD_PRINT, &taskLCDPrint);
     registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
 
 	scheduleTask(
